@@ -2,18 +2,32 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 
-def FGSM(image, label, net, criterion, epsilon=0.2):
-    net.eval()
-    image.requires_grad = True
+def FGSM(image, label, net, criterion, epsilon=0.2, adaptive=True):
+    correct = True
+    epsilon_a = 0 if adaptive else epsilon
 
-    logits = net(image)
-    #logits = logits.long()
-    label = label.long()
-    loss = criterion(logits, label)
+    while correct:
+        net.eval()
+        
+        image.requires_grad = True
 
-    loss.backward()
+        logits = net(image)
+        #logits = logits.long()
+        label = label.long()
+        loss = criterion(logits, label)
 
-    return image + epsilon * image.grad.sign()
+        loss.backward()
+
+        result = image + epsilon_a * image.grad.sign()
+
+        if not adaptive:
+            return result
+        
+        correct = torch.argmax(net(result), dim=1).item() == label.item()
+        epsilon_a += 0.01
+    
+    return result
+    
 
 def demo_fgsm(dataloader, net, criterion):
     def get_images(dataloader):
