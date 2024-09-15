@@ -1,0 +1,6 @@
+Sep 15
+
+First step, FGSM. Coded it up on MNIST, then imagenet. Accuracy on imagenet (non-adversarial) is still pretty bad bc its tiny imagenet upsampled.
+
+
+it works pretty well on mnist
