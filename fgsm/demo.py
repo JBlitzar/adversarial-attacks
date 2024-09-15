@@ -7,6 +7,10 @@ import os
 from torch.optim import Adam
 from torchvision.transforms import v2
 import tqdm
+from fgsm import demo_fgsm
+
+device = "mps" if torch.backends.mps.is_available() else "cpu"
+
 class MNISTCNN(nn.Module):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -27,39 +31,38 @@ class MNISTCNN(nn.Module):
     
 
 net = MNISTCNN()
-transform = v2.Compose(
-    v2.ToTensor(),
-    v2.Normalize((0.5),(0.5))
+net.to(device)
+transform = v2.Compose([
+    v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
+    #v2.Normalize((0.5),(0.5))
+]
 )
 trainset = MNIST(root=os.path.expanduser("~/torch_datasets/MNIST"),train=True,transform=transform)
 dataloader = DataLoader(trainset,batch_size=64)
 criterion = nn.CrossEntropyLoss()
-optimizer = Adam(net.parameters)
+try:
+    net.load_state_dict(torch.load("MNIST_demo.pt", weights_only=True))
+except:
 
-epochs = 10
-for epoch in  tqdm.tqdm(epochs):
-    for batch, target in dataloader:
-        
-        optimizer.zero_grad()
-        logits = net(batch)
+   
+    optimizer = Adam(net.parameters())
 
-        loss = criterion(logits, target)
+    epochs = 10
+    for epoch in  tqdm.trange(epochs):
+        for batch, target in tqdm.tqdm(dataloader, leave=False):
+            batch = batch.to(device)
+            target = target.to(device)
+            
+            optimizer.zero_grad()
+            logits = net(batch)
 
-        loss.backward()
-        optimizer.step()
+            loss = criterion(logits, target)
 
+            loss.backward()
+            optimizer.step()
 
-
-def FGSM(image, label, net, epsilon=0.1):
-    net.test()
-    image.requires_grad = True
-
-    logits = net(image)
-    loss = criterion(logits, label)
-
-    loss.backward()
-
-    return image + epsilon * image.grad.sign()
+    torch.save(net.state_dict(), "MNIST_demo.pt")
 
 
-    
+net.to("cpu")
+demo_fgsm(dataloader, net, criterion)
