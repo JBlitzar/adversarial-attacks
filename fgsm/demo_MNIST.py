@@ -50,7 +50,7 @@ class MNISTDense(nn.Module):
     def forward(self,x):
         return self.block(x)
 
-net = MNISTDense()
+net = MNISTCNN()
 net.to(device)
 transform = v2.Compose([
     v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
