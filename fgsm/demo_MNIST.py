@@ -30,7 +30,27 @@ class MNISTCNN(nn.Module):
         return self.block(x)
     
 
-net = MNISTCNN()
+class MNISTDense(nn.Module):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.block = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(28*28,28*28),
+            nn.ReLU(),
+            nn.Linear(28*28,28*28),
+            nn.ReLU(),
+            nn.Linear(28*28,28*28),
+            nn.ReLU(),
+            nn.Linear(28*28,10),
+            nn.Sigmoid()
+
+        )
+
+    def forward(self,x):
+        return self.block(x)
+
+net = MNISTDense()
 net.to(device)
 transform = v2.Compose([
     v2.Compose([v2.ToImage(), v2.ToDtype(torch.float32, scale=True)]),
@@ -38,7 +58,7 @@ transform = v2.Compose([
 ]
 )
 trainset = MNIST(root=os.path.expanduser("~/torch_datasets/MNIST"),train=True,transform=transform)
-dataloader = DataLoader(trainset,batch_size=64)
+dataloader = DataLoader(trainset,batch_size=64,shuffle=True)
 criterion = nn.CrossEntropyLoss()
 try:
     net.load_state_dict(torch.load("MNIST_demo.pt", weights_only=True))
