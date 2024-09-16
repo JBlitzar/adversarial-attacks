@@ -24,10 +24,27 @@ def FGSM(image, label, net, criterion, epsilon=0.2, adaptive=True):
             return result
         
         correct = torch.argmax(net(result), dim=1).item() == label.item()
-        epsilon_a += 0.01
+        epsilon_a += 0.001
     
     return result
+
+def IFGSM(image, label, net, criterion, epsilon=0.2, alpha=0.01, num_iterations=10):
+   
+    image = image.clone().detach().requires_grad_(True)
     
+    for _ in range(num_iterations):
+        net.eval()
+        logits = net(image)
+        label = label.long()
+        loss = criterion(logits, label)
+        net.zero_grad()
+        loss.backward()
+        perturbation = alpha * image.grad.sign()
+        image = image + perturbation
+        image = torch.clamp(image, min=-epsilon, max=epsilon)
+        image = image.detach().requires_grad_(True)
+    
+    return image
 
 def demo_fgsm(dataloader, net, criterion):
     def get_images(dataloader):
