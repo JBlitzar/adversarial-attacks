@@ -33,34 +33,6 @@ def FGSM(image, label, net, criterion, epsilon=0.1, adaptive=False):
     
     return result
 
-# def budget_JSMA(image, label, net, criterion, epsilon=0.3, adaptive=False):
-#     correct = False
-#     epsilon_a = 0 if adaptive else epsilon
-
-#     target_label = torch.tensor(3).unsqueeze(0)
-
-#     while not correct:
-#         net.eval()
-        
-#         image.requires_grad = True
-
-#         logits = net(image)
-#         #logits = logits.long()
-#         label = label.long()
-#         loss = criterion(logits, target_label)
-
-#         loss.backward()
-
-#         result = image - epsilon_a * image.grad.sign()
-#         result = result.clamp(0,1)
-
-#         if not adaptive:
-#             return result
-        
-#         correct = torch.argmax(net(result), dim=1).item() == target_label.item()
-#         epsilon_a += 0.001
-    
-#     return result
 
 def fgsm_acc_over_epsilon(dataloader, net, criterion, eps_step=0.05, eps_max=0.5):
     def get_fgsm_acc(epsilon, dataloader, net, criterion):
