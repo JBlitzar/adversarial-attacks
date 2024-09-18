@@ -7,7 +7,7 @@ import os
 from torch.optim import Adam
 from torchvision.transforms import v2
 import tqdm
-from fgsm import demo_fgsm
+from fgsm import demo_fgsm, fgsm_acc_over_epsilon, demo_fgsm_over_eps
 
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 
@@ -84,5 +84,7 @@ except:
     torch.save(net.state_dict(), "MNIST_demo.pt")
 
 
-net.to("cpu")
-demo_fgsm(dataloader, net, criterion)
+net.to("mps")
+#demo_fgsm(dataloader, net, criterion)
+#fgsm_acc_over_epsilon(dataloader, net, criterion)
+demo_fgsm_over_eps(dataloader, net, criterion)

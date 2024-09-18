@@ -1,8 +1,12 @@
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
+import tqdm
 
-def FGSM(image, label, net, criterion, epsilon=0.2, adaptive=True):
+device = "mps" if torch.backends.mps.is_available() else "cpu"
+
+
+def FGSM(image, label, net, criterion, epsilon=0.1, adaptive=False):
     correct = True
     epsilon_a = 0 if adaptive else epsilon
 
@@ -19,6 +23,7 @@ def FGSM(image, label, net, criterion, epsilon=0.2, adaptive=True):
         loss.backward()
 
         result = image + epsilon_a * image.grad.sign()
+        result = result.clamp(0,1)
 
         if not adaptive:
             return result
@@ -28,23 +33,99 @@ def FGSM(image, label, net, criterion, epsilon=0.2, adaptive=True):
     
     return result
 
-def IFGSM(image, label, net, criterion, epsilon=0.2, alpha=0.01, num_iterations=10):
-   
-    image = image.clone().detach().requires_grad_(True)
-    
-    for _ in range(num_iterations):
+def fgsm_acc_over_epsilon(dataloader, net, criterion, eps_step=0.05, eps_max=0.5):
+    def get_fgsm_acc(epsilon, dataloader, net, criterion):
         net.eval()
-        logits = net(image)
-        label = label.long()
-        loss = criterion(logits, label)
-        net.zero_grad()
-        loss.backward()
-        perturbation = alpha * image.grad.sign()
-        image = image + perturbation
-        image = torch.clamp(image, min=-epsilon, max=epsilon)
-        image = image.detach().requires_grad_(True)
+        running_acc_sum = 0
+        running_acc_amt = 0
+        for batch, labels in tqdm.tqdm(dataloader, leave=False):
+            batch = batch.to(device)
+            labels = labels.to(device)
+
+            adversarial_batch = FGSM(batch, labels, net, criterion, epsilon=epsilon, adaptive=False)
+            with torch.no_grad():
+                adversarial_output = net(adversarial_batch)
+
+            adversarial_pred = torch.argmax(adversarial_output, dim=1) # todo: double check
+            #print(adversarial_pred.size())
+
+            running_acc_sum += torch.sum(adversarial_pred == labels).item()
+            running_acc_amt += adversarial_pred.size(0)
+
+        return running_acc_sum / running_acc_amt
     
-    return image
+    accuracies = []
+    eps_range = np.linspace(0,eps_max, int(eps_max // eps_step))
+    for eps in tqdm.tqdm(eps_range):
+
+        fgsm_acc = get_fgsm_acc(eps, dataloader, net, criterion)
+        accuracies.append(fgsm_acc)
+
+
+    plt.plot(eps_range, accuracies)
+    plt.show()
+
+
+
+def demo_fgsm_over_eps(dataloader, net, criterion, eps_step=0.05,eps_max=0.5):
+    
+    def get_images(dataloader):
+        try:
+            for images, labels, human_labels in dataloader:
+                image = images
+                label = labels
+                human_label = human_labels
+                break
+            return image[0].unsqueeze(0).to(device), label[0].unsqueeze(0).to(device), human_label[0]
+        except:
+            for images, labels in dataloader:
+                image = images
+                label = labels
+                break
+            return image[0].unsqueeze(0).to(device), label[0].unsqueeze(0).to(device), ""
+
+
+    def plot_images(images, labels):
+        fig, axes = plt.subplots(1, len(images), figsize=(20,20))
+        def process_img(img):
+            return img.squeeze().detach().cpu().numpy()
+
+        for ax, image, label in zip(axes,images, labels):
+            
+            ax.imshow(process_img(image), cmap='gray')
+            ax.set_title(f'{label}')
+            ax.axis('off')
+
+
+        plt.tight_layout()
+        plt.show()
+
+    net.eval()
+    eps_range = np.linspace(0,eps_max, int(eps_max // eps_step))
+    images_to_plot = []
+    labels_to_plot = []
+    for epsilon in eps_range:
+        orig_image,orig_label,human_label = get_images(dataloader)
+
+        with torch.no_grad():
+            original_output = net(orig_image)
+        original_pred = torch.argmax(original_output, dim=1).item()
+
+        adversarial_image = FGSM(orig_image, orig_label, net, criterion, epsilon=epsilon, adaptive=False)
+
+
+        with torch.no_grad():
+            adversarial_output = net(adversarial_image)
+        adversarial_pred = torch.argmax(adversarial_output, dim=1).item()
+
+
+        labels_to_plot.append(f"{epsilon}: {original_pred} -> {adversarial_pred}")
+        images_to_plot.append(adversarial_image)
+
+
+    plot_images(images_to_plot, labels_to_plot)
+
+
 
 def demo_fgsm(dataloader, net, criterion):
     def get_images(dataloader):
