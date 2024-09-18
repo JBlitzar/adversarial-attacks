@@ -84,7 +84,7 @@ except:
     torch.save(net.state_dict(), "MNIST_demo.pt")
 
 
-net.to("mps")
-#demo_fgsm(dataloader, net, criterion)
+net.to("cpu")
+demo_fgsm(dataloader, net, criterion)
 #fgsm_acc_over_epsilon(dataloader, net, criterion)
-demo_fgsm_over_eps(dataloader, net, criterion)
+#demo_fgsm_over_eps(dataloader, net, criterion)
