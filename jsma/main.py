@@ -1,8 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torchvision import datasets, transforms
-from torch.autograd import Variable
 from torch.utils.data import DataLoader
 from torchvision.datasets import MNIST
 import os
@@ -86,6 +84,8 @@ def jsma_attack(model, image, target, epsilon=0.1, num_features=28*28):
         
 
         # Do stuff to get perturbed_image...
+
+        
 
 
         output = model(perturbed_image)
