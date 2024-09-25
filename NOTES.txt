@@ -16,3 +16,8 @@ Woohoo! finished up FGSM. Made some neat visualizations in fgsm/results (acc/eps
 https://arxiv.org/pdf/1511.07528
 https://arxiv.org/pdf/2007.06032
 https://arxiv.org/pdf/1808.07945
+
+
+Sep 24:
+
+Tried to code up some JSMA, its giving error but we're almost there.
