@@ -75,7 +75,7 @@ net.to("cpu")
 net.eval()
 
 
-def jsma_attack(model, image, target, theta=1, num_features=28*28,img_wh = 28):
+def jsma_attack(model, image, target, theta=0.1, num_features=28*28,img_wh = 28):
 
     image = image.clone().detach().requires_grad_(True)
     target = torch.tensor([target])
@@ -141,9 +141,9 @@ def jsma_attack(model, image, target, theta=1, num_features=28*28,img_wh = 28):
         col = best_index % img_wh
         print(J_target.size())
         if J_target[0][0][row][col] > 0:
-            cur_image[0][0][row][col] -= theta
-        else:
             cur_image[0][0][row][col] += theta
+        else:
+            cur_image[0][0][row][col] -= theta
 
         
         
@@ -152,7 +152,8 @@ def jsma_attack(model, image, target, theta=1, num_features=28*28,img_wh = 28):
         print(torch.max(cur_image))
         print("minmax^^")
 
-        cur_image = torch.clamp(cur_image,0,1)
+        
+        #cur_image = torch.clamp(cur_image,0-theta,1+theta)
 
         
 
@@ -162,7 +163,8 @@ def jsma_attack(model, image, target, theta=1, num_features=28*28,img_wh = 28):
         final_pred = output.max(1, keepdim=True)[1]
 
         if final_pred.item() == target.item():
-
+            print(i)
+            print("^")
             return cur_image, True
     return image, False
 
