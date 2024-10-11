@@ -76,6 +76,7 @@ net.eval()
 
 
 def jsma_attack(model, image, target, theta=1, num_features=28*28,img_wh = 28):
+
     image = image.clone().detach().requires_grad_(True)
     target = torch.tensor([target])
 
@@ -120,22 +121,31 @@ def jsma_attack(model, image, target, theta=1, num_features=28*28,img_wh = 28):
 
         S[torch.logical_or(J_target < 0, J_other_total > 0)] = 0 # most normal boolean mask
 
-        return S
+        return S, J_target
 
     cur_image = image.detach().clone()
     
     for i in range(num_features):
 
         cur_image.requires_grad = True
-        map = saliency_map(cur_image)
-
+        map, J_target = saliency_map(cur_image)
         cur_image.requires_grad = False
+
+        
 
         best_index = torch.argmax(map).item()
         print(best_index)
         
         print(cur_image.size())
-        cur_image[0][0][best_index // img_wh][best_index % img_wh] += theta 
+        row = best_index // img_wh
+        col = best_index % img_wh
+        print(J_target.size())
+        if J_target[0][0][row][col] > 0:
+            cur_image[0][0][row][col] -= theta
+        else:
+            cur_image[0][0][row][col] += theta
+
+        
         
         # best code
         print(torch.min(cur_image))
@@ -211,7 +221,7 @@ def demo_jsma(dataloader, net): #TODO: prevent code reuse
 
     adversarial_image,success = jsma_attack(net,orig_image,(orig_label + 1) % 10)
 
-
+    print(success)
 
 
     with torch.no_grad():
